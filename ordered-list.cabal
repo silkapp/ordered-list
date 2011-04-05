@@ -3,13 +3,15 @@ Version:          0.1
 Synopsis:         Ordered list type with efficient and streaming observation in two directions.
 Description:      Ordered list type with efficient and streaming observation in two directions.
 
-Category:         Control
+Category:         Control, Data
 License:          BSD3
 License-file:     LICENSE
 Author:           Sebastiaan Visser
-Maintainer:       haskell@fvisser.nl
+Maintainer:       code@typlab.com
+Copyright:        (c) 2011, typLAB
 Build-Type:       Simple
 Cabal-Version:    >= 1.6
+Homepage:         http://github.com/typLAB/ordered-list
 
 Library
   GHC-Options:      -Wall
