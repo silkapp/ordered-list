@@ -65,6 +65,7 @@ module Data.List.Ordered
 , mergeBy
 , localNubBy
 , mapRange
+, smartLength
 )
 where
 
@@ -97,7 +98,7 @@ instance Foldable List where
   foldMap f = foldMap f . toUnorderedList
 
 instance Ord a => Eq (List a) where
-  a == b = compare a b == EQ 
+  a == b = compare a b == EQ
 
 instance Ord a => Ord (List a) where
   compare = compare `on` toAscList
@@ -184,27 +185,13 @@ drop i = Drop i
 -- | /O(n)/ Compute the length of the list.
 
 length :: List a -> Int
-length (FromAsc       xs   ) = S.length xs
-length (FromDesc      xs   ) = S.length xs
-length (FromAscOrDesc xs _ ) = S.length xs
-length (Merge         xs ys) = length xs + length ys
-length (Take        j xs   ) = max 0 (min j (length xs))
-length (Drop        j xs   ) = max 0 (length xs - j)
+length = S.length . toUnorderedSeq
 
 -- | /O(max n m)/ Compute the size of list, but never count more than /m/
 -- items.
 
 atLeast :: Int -> List a -> Maybe Int
-atLeast n (FromAsc       xs   ) = smartLength n xs
-atLeast n (FromDesc      xs   ) = smartLength n xs
-atLeast n (FromAscOrDesc xs _ ) = smartLength n xs
-atLeast n (Merge         xs ys) = do l <- atLeast n xs
-                                     j <- atLeast (n - l) ys
-                                     return (l + j)
-atLeast n (Take        j xs   ) = if n < j
-                                  then atLeast n xs
-                                  else atLeast j xs <|> Just j
-atLeast n (Drop        j xs   ) = (\m -> max 0 (m - j)) <$> atLeast (j + n) xs
+atLeast n = smartLength n . toUnorderedSeq
 
 -- | /O(1)/ Is the list empty?
 
