@@ -19,14 +19,15 @@ module Data.List.Ordered
 , merges
 
 -- * Operations on ordered lists.
+, null
+, length
 , mapMonotonic
 , mergeMap
 , filter
 , take
 , drop
-, length
-, atLeast
-, null
+, boundedLength
+, nubBy
 
 -- * Creation from Haskell sequences.
 , fromSeq
@@ -93,6 +94,7 @@ data List a =
   | Merge         (List a) (List a)
   | Take          Int (List a)
   | Drop          Int (List a)
+  | NubBy (a -> a -> Bool) (List a)
 
 instance Foldable List where
   foldMap f = foldMap f . toUnorderedList
@@ -147,13 +149,14 @@ merges = foldr merge empty
 -- The result must be ordered again otherwise the state of the list will be
 -- undefined and observation will most likely fail.
 
-mapMonotonic :: (a -> b) -> List a -> List b
+mapMonotonic :: (a -> a) -> List a -> List a
 mapMonotonic f (FromAsc       xs   ) = FromAsc       (fmap f xs)
 mapMonotonic f (FromDesc      xs   ) = FromDesc      (fmap f xs)
 mapMonotonic f (FromAscOrDesc xs ys) = FromAscOrDesc (fmap f xs) (fmap f ys)
 mapMonotonic f (Merge         xs ys) = Merge         (mapMonotonic f xs) (mapMonotonic f ys)
 mapMonotonic f (Take        j xs   ) = Take j        (mapMonotonic f xs)
 mapMonotonic f (Drop        j xs   ) = Drop j        (mapMonotonic f xs)
+mapMonotonic f (NubBy       g xs   ) = NubBy g       (mapMonotonic f xs)
 
 -- | /O(n * m)/ Map a function that produces ordered lists over every item and
 -- merge the results into a new ordered list. This function is the monadic bind
@@ -171,8 +174,9 @@ filter f (FromAscOrDesc xs ys) = FromAscOrDesc (S.filter f xs) (S.filter f ys)
 filter f (Merge         xs ys) = Merge         (filter f xs) (filter f ys)
 filter f (Take        j xs   ) = Take j        (filter f xs)
 filter f (Drop        j xs   ) = Drop j        (filter f xs)
+filter f (NubBy       g xs   ) = NubBy g       (filter f xs)
 
--- | /O(n)/ Take a fixed number of items from the beginning of the list.
+-- | /O(m)/ Take a fixed number of items from the beginning of the list.
 
 take :: Int -> List a -> List a
 take j = Take j
@@ -190,13 +194,18 @@ length = S.length . toUnorderedSeq
 -- | /O(max n m)/ Compute the size of list, but never count more than /m/
 -- items.
 
-atLeast :: Int -> List a -> Maybe Int
-atLeast n = smartLength n . toUnorderedSeq
+boundedLength :: Int -> List a -> Maybe Int
+boundedLength n = smartLength n . toUnorderedSeq
 
 -- | /O(1)/ Is the list empty?
 
 null :: List a -> Bool
-null = isJust . atLeast 0
+null = isJust . boundedLength 0
+
+-- | /O(n)/ Remove duplicate items from the list.
+
+nubBy :: (a -> a -> Bool) -> List a -> List a
+nubBy f = NubBy f
 
 -------------------------------------------------------------------------------
 
@@ -294,6 +303,7 @@ toUnorderedSeq (FromAscOrDesc xs _ ) = xs
 toUnorderedSeq (Merge         xs ys) = toUnorderedSeq xs `mappend` toUnorderedSeq ys
 toUnorderedSeq (Take        j xs   ) = S.take j (toUnorderedSeq xs)
 toUnorderedSeq (Drop        j xs   ) = S.drop j (toUnorderedSeq xs)
+toUnorderedSeq (NubBy       f xs   ) = localNubBy f (toUnorderedSeq xs)
 
 -- | /O(n * n)/ Observe the ordered list as an ordered Haskell sequence with
 -- items in ascending order.
@@ -305,6 +315,7 @@ toAscSeq (FromAscOrDesc xs _ ) = xs
 toAscSeq (Merge         xs ys) = mergeBy (>) (toAscSeq xs) (toAscSeq ys)
 toAscSeq (Take        j xs   ) = S.take j (toAscSeq xs)
 toAscSeq (Drop        j xs   ) = S.drop j (toAscSeq xs)
+toAscSeq (NubBy       f xs   ) = localNubBy f (toAscSeq xs)
 
 -- | /O(n * n)/ Observe the ordered list as an ordered Haskell sequence with
 -- items in descending order.
@@ -316,6 +327,7 @@ toDescSeq (FromAscOrDesc _  ys) = ys
 toDescSeq (Merge         xs ys) = mergeBy (<) (toDescSeq xs) (toDescSeq ys)
 toDescSeq (Take        j xs   ) = S.take j (toDescSeq xs)
 toDescSeq (Drop        j xs   ) = S.drop j (toDescSeq xs)
+toDescSeq (NubBy       f xs   ) = localNubBy f (toDescSeq xs)
 
 -------------------------------------------------------------------------------
 

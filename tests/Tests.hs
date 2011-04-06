@@ -16,29 +16,13 @@ import qualified Data.Map as M
 import qualified Data.Sequence as S
 
 newtype Val = Val { unVal :: Int }
-  deriving ( Random
-           , Num
-           , Real
-           , Enum
-           , Integral
-           , Show
-           , Eq
-           , Ord
-           )
+  deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord)
 
 instance Arbitrary Val where
   arbitrary = choose (0, 1000)
 
 newtype Slice = Slice { unSlice :: Int }
-  deriving ( Random
-           , Num
-           , Real
-           , Enum
-           , Integral
-           , Show
-           , Eq
-           , Ord
-           )
+  deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord)
 
 instance Arbitrary Slice where
   arbitrary = choose (0, 4)
@@ -53,6 +37,7 @@ instance (Ord a, Arbitrary a) => Arbitrary (List a) where
                         , (3, merge <$> arbitrary <*> arbitrary)
                         , (1, O.take <$> (unSlice <$> arbitrary) <*> arbitrary)
                         , (1, O.drop <$> (unSlice <$> arbitrary) <*> arbitrary)
+                        , (1, O.nubBy (==) <$> arbitrary )
                         ]
 
 -------------------------------------------------------------------------------
@@ -116,6 +101,14 @@ fromMapT keys =
   let m = M.fromList (zip keys (map (*2) keys))
    in observe (fromMap m) (M.elems m)
 
+boundedLengthT :: [Val] -> Val -> Bool
+boundedLengthT a (Val n) =
+  let x = boundedLength n (fromList a)
+      y = length a
+  in x == if y > n
+          then Nothing
+          else Just y
+
 fromMapRangeT :: Val -> [Val] -> Val -> Val -> Val -> Bool -> Bool -> Bool
 fromMapRangeT key keys mid ii jj x y = 
   let i     = mid - ii
@@ -135,7 +128,7 @@ fromMapRangeT key keys mid ii jj x y =
   in observe olist list
 
 localNubByT :: [Val] -> Bool
-localNubByT a = (localNubBy (==) . toAscSeq . fromList) a == S.fromList (nub (sort a))
+localNubByT a = observe (O.nubBy (==) (fromList a)) (nub (sort a))
 
 filterT :: List Val -> Bool
 filterT a =
@@ -192,7 +185,7 @@ main =
      putStrLn "fromDescListT: ";         quickCheck fromDescListT
      putStrLn "fromAscOrDescListT: ";    quickCheck fromAscOrDescListT
      putStrLn "fromListsT: ";            quickCheck fromListsT
-     putStrLn "mergesT: ";               quickCheckWith stdArgs { maxSize = 10 } bindT
+     putStrLn "mergesT: ";               quickCheckWith stdArgs { maxSize = 7 } bindT
      putStrLn "addEmptyT: ";             quickCheck addEmptyT
      putStrLn "mappendMemptyT: ";        quickCheck mappendMemptyT
      putStrLn "fromMapT: ";              quickCheck fromMapT
@@ -201,4 +194,5 @@ main =
      putStrLn "filterT:";                quickCheck mapMonotonicT
      putStrLn "fromMapRangeT:";          quickCheck fromMapRangeT
      putStrLn "bindT:";                  quickCheckWith stdArgs { maxSize = 7 } bindT
+     putStrLn "boundedLengthT:";                  quickCheck boundedLengthT
 
