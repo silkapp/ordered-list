@@ -1,8 +1,12 @@
+{-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE
     DeriveFunctor
   , DeriveFoldable
   , DeriveTraversable
   , TupleSections
+  , TemplateHaskell
+  , TypeFamilies
+  , EmptyDataDecls
   #-}
 {- | Ordered list type with efficient and streaming observation in two directions.  -}
 module Data.List.Ordered
@@ -72,19 +76,21 @@ module Data.List.Ordered
 where
 
 import Control.Applicative hiding (empty)
+import Control.DeepSeq
 import Control.Monad.Identity
 import Control.Monad.Trans
+import Data.Foldable (Foldable (foldMap))
 import Data.Function (on)
-import Data.Ord
 import Data.Maybe
 import Data.Monoid
-import Data.Foldable (Foldable (foldMap))
-import Prelude hiding (filter, drop, take, length, null)
+import Data.Ord
 import Data.Sequence (Seq, breakl, viewl, ViewL(..), (<|))
+import Generics.Regular hiding (from, to)
+import Prelude hiding (filter, drop, take, length, null)
 import qualified Control.Applicative
-import qualified Data.Sequence as S
-import qualified Data.Map as M
 import qualified Data.Foldable as F
+import qualified Data.Map as M
+import qualified Data.Sequence as S
 
 -------------------------------------------------------------------------------
 
@@ -96,6 +102,21 @@ data List a =
   | Take          Int (List a)
   | Drop          Int (List a)
   | NubBy (a -> a -> Bool) (List a)
+
+$(deriveAll ''List "PFList")
+type instance PF (List r) = PFList r
+
+instance NFData a => NFData (Seq a) where
+  rnf = rnf . F.toList
+
+instance NFData a => NFData (List a) where
+  rnf (FromAsc       ys   ) = rnf ys
+  rnf (FromDesc      ys   ) = rnf ys
+  rnf (FromAscOrDesc xs ys) = rnf (xs, ys)
+  rnf (Merge         xs ys) = rnf (xs, ys)
+  rnf (Take          i xs ) = rnf (i, xs)
+  rnf (Drop          i xs ) = rnf (i, xs)
+  rnf (NubBy _       xs   ) = rnf xs
 
 instance Foldable List where
   foldMap f = foldMap f . toUnorderedList
