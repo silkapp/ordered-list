@@ -22,6 +22,7 @@ module Data.List.Ordered
 , null
 , length
 , mapMonotonic
+, mapMonotonicEq
 , mergeMap
 , filter
 , take
@@ -147,16 +148,24 @@ merges = foldr merge empty
 
 -- | /O(n)/ Map a function over all items in the ordered list monotonically.
 -- The result must be ordered again otherwise the state of the list will be
--- undefined and observation will most likely fail.
+-- undefined and observation will most likely fail. A new comparison function
+-- must be specified to allow potential nub'ing of the new elements.
 
-mapMonotonic :: (a -> a) -> List a -> List a
-mapMonotonic f (FromAsc       xs   ) = FromAsc       (fmap f xs)
-mapMonotonic f (FromDesc      xs   ) = FromDesc      (fmap f xs)
-mapMonotonic f (FromAscOrDesc xs ys) = FromAscOrDesc (fmap f xs) (fmap f ys)
-mapMonotonic f (Merge         xs ys) = Merge         (mapMonotonic f xs) (mapMonotonic f ys)
-mapMonotonic f (Take        j xs   ) = Take j        (mapMonotonic f xs)
-mapMonotonic f (Drop        j xs   ) = Drop j        (mapMonotonic f xs)
-mapMonotonic f (NubBy       g xs   ) = NubBy g       (mapMonotonic f xs)
+mapMonotonic :: (a -> b) -> (b -> b -> Bool) -> List a -> List b
+mapMonotonic f g = r where 
+  r l = case l of
+          FromAsc       xs    -> FromAsc       (fmap f xs)
+          FromDesc      xs    -> FromDesc      (fmap f xs)
+          FromAscOrDesc xs ys -> FromAscOrDesc (fmap f xs) (fmap f ys)
+          Merge         xs ys -> Merge         (r xs) (r ys)
+          Take        j xs    -> Take j        (r xs)
+          Drop        j xs    -> Drop j        (r xs)
+          NubBy       _ xs    -> NubBy g       (r xs)
+
+-- | /O(n)/ Like `mapMonotonic` but uses the `Eq' instance by default.
+
+mapMonotonicEq :: Eq b => (a -> b) -> List a -> List b
+mapMonotonicEq f = mapMonotonic f (==)
 
 -- | /O(n * m)/ Map a function that produces ordered lists over every item and
 -- merge the results into a new ordered list. This function is the monadic bind
