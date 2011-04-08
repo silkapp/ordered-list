@@ -3,9 +3,10 @@
 module Main where
 
 import Control.Applicative
+import Control.DeepSeq
 import Control.Monad.Trans
 import Data.List
-import Data.List.Ordered hiding (null, length, take, drop, filter, empty)
+import Data.List.Ordered hiding (null, length, take, drop, filter, empty, sort, nub)
 import Data.Monoid
 import System.IO.Unsafe
 import System.Random
@@ -13,16 +14,15 @@ import Test.QuickCheck
 import qualified Data.Foldable as F
 import qualified Data.List.Ordered as O
 import qualified Data.Map as M
-import qualified Data.Sequence as S
 
 newtype Val = Val { unVal :: Int }
-  deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord)
+  deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord, NFData)
 
 instance Arbitrary Val where
   arbitrary = choose (0, 1000)
 
 newtype Slice = Slice { unSlice :: Int }
-  deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord)
+  deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord, NFData)
 
 instance Arbitrary Slice where
   arbitrary = choose (0, 4)
@@ -37,23 +37,24 @@ instance (Ord a, Arbitrary a) => Arbitrary (List a) where
                         , (3, merge <$> arbitrary <*> arbitrary)
                         , (1, O.take <$> (unSlice <$> arbitrary) <*> arbitrary)
                         , (1, O.drop <$> (unSlice <$> arbitrary) <*> arbitrary)
-                        , (1, O.nubBy (==) <$> arbitrary )
+                        , (1, O.nub <$> arbitrary )
                         ]
 
 -------------------------------------------------------------------------------
 
-check :: (Show a, Ord a) => List a -> [a] -> (List a -> List a) -> ([a] -> [a]) -> Bool
-check a b f g = and
-  [                    (f a) == f (fromList              b)
-  , toList (Just Asc)  (f a) == g (sort                  b)
-  , toList (Just Desc) (f a) == g (sortBy (flip compare) b)
-  , O.null             (f a) == null                  (g b)
-  , O.length           (f a) == length                (g b)
-  , show               (f a) == show                  (g (sort b))
-  , sort (F.toList a)        == sort b
-  ]
+check :: (NFData a, Show a, Ord a) => List a -> [a] -> (List a -> List a) -> ([a] -> [a]) -> Bool
+check a b f g =
+  a `deepseq` and
+    [                    (f a) == f (fromList              b)
+    , toList (Just Asc)  (f a) == g (sort                  b)
+    , toList (Just Desc) (f a) == g (sortBy (flip compare) b)
+    , O.null             (f a) == null                  (g b)
+    , O.length           (f a) == length                (g b)
+    , show               (f a) == show                  (g (sort b))
+    , sort (F.toList a)        == sort b
+    ]
 
-observe :: (Show a, Ord a) => List a -> [a] -> Bool
+observe :: (NFData a, Show a, Ord a) => List a -> [a] -> Bool
 observe a b =
   let n = length b
       h = n `div` 2
@@ -128,7 +129,7 @@ fromMapRangeT key keys mid ii jj x y =
   in observe olist list
 
 localNubByT :: [Val] -> Bool
-localNubByT a = observe (O.nubBy (==) (fromList a)) (nub (sort a))
+localNubByT a = observe (O.nub (fromList a)) (nub (sort a))
 
 filterT :: List Val -> Bool
 filterT a =
@@ -145,6 +146,12 @@ filterT a =
          , filter even         v == []
          , filter (not . even) v == v
          ]
+
+sortAscT :: [Val] -> Bool
+sortAscT a = observe (O.sort Asc (fromList a)) a
+
+sortDescT :: [Val] -> Bool
+sortDescT a = observe (O.sort Desc (fromList a)) a
 
 mapMonotonicT :: List Val -> Bool
 mapMonotonicT a = filterT (mapMonotonic (+10) a)
@@ -194,5 +201,7 @@ main =
      putStrLn "filterT:";                quickCheck mapMonotonicT
      putStrLn "fromMapRangeT:";          quickCheck fromMapRangeT
      putStrLn "bindT:";                  quickCheckWith stdArgs { maxSize = 7 } bindT
-     putStrLn "boundedLengthT:";                  quickCheck boundedLengthT
+     putStrLn "boundedLengthT:";         quickCheck boundedLengthT
+     putStrLn "sortAscT:";               quickCheck sortAscT
+     putStrLn "sortDescT:";              quickCheck sortDescT
 
