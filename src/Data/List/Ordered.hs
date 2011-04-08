@@ -34,6 +34,7 @@ module Data.List.Ordered
 , boundedLength
 , nub
 , sort
+, sortBy
 
 -- * Creation from Haskell sequences.
 , fromSeq
@@ -235,10 +236,22 @@ null = isJust . boundedLength 0
 nub :: Eq a => List a -> List a
 nub = Nub
 
--- | /O(n)/ Sort the list in ascending or descending order.
+-- | Sort the list in ascending or descending order using the default `Ord'
+-- instance for the value type.
 
 sort :: Ord a => Direction -> List a -> List a
 sort = Sort
+
+-- | Sort the list in ascending or descending order with a custom ordering
+-- function. This breaks the original list structure and rebuild a new order
+-- list from the result.
+
+sortBy :: Direction -> (a -> a -> Ordering) -> List a -> List a
+sortBy d f =
+  case d of
+    Asc  -> fromAscSeq  . S.unstableSortBy f
+    Desc -> fromDescSeq . S.unstableSortBy (flip f)
+  . toUnorderedSeq
 
 -------------------------------------------------------------------------------
 
