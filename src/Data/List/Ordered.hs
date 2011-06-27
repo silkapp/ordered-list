@@ -78,7 +78,6 @@ module Data.List.Ordered
 where
 
 import Control.Applicative hiding (empty)
-import Control.DeepSeq
 import Control.Monad.Identity hiding (mapM)
 import Control.Monad.Trans
 import Data.Foldable (Foldable (foldMap), foldr)
@@ -90,6 +89,7 @@ import Data.Ord
 import Data.Sequence (Seq, breakl, viewl, ViewL(..), (<|))
 import Generics.Regular hiding (from, to)
 import Prelude hiding (filter, drop, take, length, null, mapM, foldr)
+
 import qualified Control.Applicative
 import qualified Data.Foldable as F
 import qualified Data.Map as M
@@ -98,25 +98,13 @@ import qualified Data.Sequence as S
 -------------------------------------------------------------------------------
 
 data List a  where
-  From     ::          Direction -> Seq a  -> List a
+  Directed ::          Direction -> Seq a  -> List a
   FromBoth ::          Seq a -> Seq a      -> List a
   Merge    ::          List a -> List a    -> List a
   Take     ::          Int -> List a       -> List a
   Drop     ::          Int -> List a       -> List a
   Sort     :: Ord a => Direction -> List a -> List a
   Nub      :: Eq a  => List a              -> List a
-
-instance NFData a => NFData (Seq a) where
-  rnf = rnf . F.toList
-
-instance NFData a => NFData (List a) where
-  rnf (From      d xs) = rnf (d,  xs)
-  rnf (FromBoth xs ys) = rnf (xs, ys)
-  rnf (Merge    xs ys) = rnf (xs, ys)
-  rnf (Take      i xs) = rnf (i,  xs)
-  rnf (Drop      i xs) = rnf (i,  xs)
-  rnf (Sort      d xs) = rnf (d,  xs)
-  rnf (Nub         xs) = rnf xs
 
 instance Foldable List where
   foldMap f = foldMap f . toUnorderedList
@@ -137,10 +125,6 @@ instance Monoid (List a) where
 -- | A sorting direction, either ascending or descending.
 data Direction = Asc | Desc
   deriving (Eq, Ord, Show)
-
-instance NFData Direction where
-  rnf Asc  = ()
-  rnf Desc = ()
 
 -------------------------------------------------------------------------------
 
@@ -166,7 +150,9 @@ merge a b | null a    = b
           | null b    = a
           | otherwise = Merge a b
 
--- | /O(m)/ Merge a collection of ordered lists.
+-- | /O(m)/ Merge a collection of ordered lists. This function is more
+-- efficient for a small amount of large lists, and less efficient for a large
+-- amount of small lists.
 
 merges :: Foldable f => f (List a) -> List a
 merges = foldr merge empty
@@ -179,7 +165,7 @@ merges = foldr merge empty
 mapMonotonic :: Ord b => (a -> b) -> List a -> List b
 mapMonotonic f = r where 
   r l = case l of
-          From      d xs -> From d   (fmap f xs)
+          Directed  d xs -> Directed d (fmap f xs)
           FromBoth xs ys -> FromBoth (fmap f xs) (fmap f ys)
           Merge    xs ys -> Merge    (r xs) (r ys)
           Take      j xs -> Take j   (r xs)
@@ -197,7 +183,7 @@ mergeMap f = merges . map f . toUnorderedList
 -- | /O(n)/ Filter elements from the list.
 
 filter :: (a -> Bool) -> List a -> List a
-filter f (From      d xs) = From d   (S.filter f xs)
+filter f (Directed  d xs) = Directed d (S.filter f xs)
 filter f (FromBoth xs ys) = FromBoth (S.filter f xs) (S.filter f ys)
 filter f (Merge    xs ys) = Merge    (filter f xs) (filter f ys)
 filter f (Take      j xs) = Take j   (filter f xs)
@@ -244,7 +230,7 @@ sort = Sort
 
 -- | Sort the list in ascending or descending order with a custom ordering
 -- function. This breaks the original list structure and rebuild a new order
--- list from the result.
+-- list from the result. This is likely to be inefficient.
 
 sortBy :: Direction -> (a -> a -> Ordering) -> List a -> List a
 sortBy d f =
@@ -267,13 +253,13 @@ fromSeq xs = let sorted = S.unstableSort xs in FromBoth sorted (S.reverse sorted
 -- items already in ascending order.
 
 fromAscSeq :: Seq a -> List a
-fromAscSeq = From Asc
+fromAscSeq = Directed Asc
 
 -- | /O(1)/ Create an ordered list form a Haskell sequence that has all the
 -- items already in descending order.
 
 fromDescSeq :: Seq a -> List a
-fromDescSeq = From Desc
+fromDescSeq = Directed Desc
 
 -- | /O(1)/ Create an ordered list form two Haskell sequence that have all the
 -- items already in ascending and respectively descending order. The invariant
@@ -343,43 +329,43 @@ toSeq (Just Asc)  = toAscSeq
 -- | /O(n)/ Observe the ordered list as an unordered Haskell sequence.
 
 toUnorderedSeq :: List a -> Seq a
-toUnorderedSeq (From Asc  xs   ) = xs
-toUnorderedSeq (From Desc xs   ) = xs
-toUnorderedSeq (FromBoth  xs _ ) = xs
-toUnorderedSeq (Merge     xs ys) = toUnorderedSeq xs `mappend` toUnorderedSeq ys
-toUnorderedSeq (Take       j xs) = S.take j (toUnorderedSeq xs)
-toUnorderedSeq (Drop       j xs) = S.drop j (toUnorderedSeq xs)
-toUnorderedSeq (Sort Asc     xs) = toAscSeq xs
-toUnorderedSeq (Sort Desc    xs) = toDescSeq xs
-toUnorderedSeq (Nub          xs) = localNubBy (==) (toUnorderedSeq xs)
+toUnorderedSeq (Directed Asc  xs) = xs
+toUnorderedSeq (Directed Desc xs) = xs
+toUnorderedSeq (FromBoth   xs _ ) = xs
+toUnorderedSeq (Merge      xs ys) = toUnorderedSeq xs `mappend` toUnorderedSeq ys
+toUnorderedSeq (Take        j xs) = S.take j (toUnorderedSeq xs)
+toUnorderedSeq (Drop        j xs) = S.drop j (toUnorderedSeq xs)
+toUnorderedSeq (Sort Asc      xs) = toAscSeq xs
+toUnorderedSeq (Sort Desc     xs) = toDescSeq xs
+toUnorderedSeq (Nub           xs) = localNubBy (==) (toUnorderedSeq xs)
 
 -- | /O(n * n)/ Observe the ordered list as an ordered Haskell sequence with
 -- items in ascending order.
 
 toAscSeq :: Ord a => List a -> Seq a
-toAscSeq (From Asc  xs   ) = xs
-toAscSeq (From Desc xs   ) = S.reverse xs
-toAscSeq (FromBoth  xs _ ) = xs
-toAscSeq (Merge     xs ys) = mergeBy (>) (toAscSeq xs) (toAscSeq ys)
-toAscSeq (Take       j xs) = S.take j (toAscSeq xs)
-toAscSeq (Drop       j xs) = S.drop j (toAscSeq xs)
-toAscSeq (Sort Asc     xs) = toAscSeq xs
-toAscSeq (Sort Desc    xs) = toAscSeq xs
-toAscSeq (Nub          xs) = localNubBy (==) (toAscSeq xs)
+toAscSeq (Directed Asc  xs) = xs
+toAscSeq (Directed Desc xs) = S.reverse xs
+toAscSeq (FromBoth   xs _ ) = xs
+toAscSeq (Merge      xs ys) = mergeBy (>) (toAscSeq xs) (toAscSeq ys)
+toAscSeq (Take        j xs) = S.take j (toAscSeq xs)
+toAscSeq (Drop        j xs) = S.drop j (toAscSeq xs)
+toAscSeq (Sort Asc      xs) = toAscSeq xs
+toAscSeq (Sort Desc     xs) = toAscSeq xs
+toAscSeq (Nub           xs) = localNubBy (==) (toAscSeq xs)
 
 -- | /O(n * n)/ Observe the ordered list as an ordered Haskell sequence with
 -- items in descending order.
 
 toDescSeq :: Ord a => List a -> Seq a
-toDescSeq (From Asc  xs   ) = S.reverse xs
-toDescSeq (From Desc xs   ) = xs
-toDescSeq (FromBoth  _  ys) = ys
-toDescSeq (Merge     xs ys) = mergeBy (<) (toDescSeq xs) (toDescSeq ys)
-toDescSeq (Take       j xs) = S.take j (toDescSeq xs)
-toDescSeq (Drop       j xs) = S.drop j (toDescSeq xs)
-toDescSeq (Sort Asc     xs) = toDescSeq xs
-toDescSeq (Sort Desc    xs) = toDescSeq xs
-toDescSeq (Nub          xs) = localNubBy (==) (toDescSeq xs)
+toDescSeq (Directed Asc  xs) = S.reverse xs
+toDescSeq (Directed Desc xs) = xs
+toDescSeq (FromBoth   _  ys) = ys
+toDescSeq (Merge      xs ys) = mergeBy (<) (toDescSeq xs) (toDescSeq ys)
+toDescSeq (Take        j xs) = S.take j (toDescSeq xs)
+toDescSeq (Drop        j xs) = S.drop j (toDescSeq xs)
+toDescSeq (Sort Asc      xs) = toDescSeq xs
+toDescSeq (Sort Desc     xs) = toDescSeq xs
+toDescSeq (Nub           xs) = localNubBy (==) (toDescSeq xs)
 
 -------------------------------------------------------------------------------
 
