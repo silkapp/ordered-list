@@ -6,14 +6,15 @@ import Control.Applicative
 import Control.DeepSeq
 import Control.Monad.Trans
 import Data.List
-import Data.List.Ordered hiding (null, length, take, drop, filter, empty, sort, nub)
+import Data.List.Ordered hiding (null, length, take, drop, filter, empty, sort, nub, sortBy)
 import Data.Monoid
 import System.IO.Unsafe
 import System.Random
 import Test.QuickCheck
-import qualified Data.Foldable as F
+
+import qualified Data.Foldable     as F
 import qualified Data.List.Ordered as O
-import qualified Data.Map as M
+import qualified Data.Map          as M
 
 newtype Val = Val { unVal :: Int }
   deriving (Random, Num, Real, Enum, Integral, Show, Eq, Ord, NFData)
@@ -42,17 +43,16 @@ instance (Ord a, Arbitrary a) => Arbitrary (List a) where
 
 -------------------------------------------------------------------------------
 
-check :: (NFData a, Show a, Ord a) => List a -> [a] -> (List a -> List a) -> ([a] -> [a]) -> Bool
+check :: (Show a, Ord a) => List a -> [a] -> (List a -> List a) -> ([a] -> [a]) -> Bool
 check a b f g =
-  a `deepseq` and
-    [                    (f a) == f (fromList              b)
-    , toList (Just Asc)  (f a) == g (sort                  b)
-    , toList (Just Desc) (f a) == g (sortBy (flip compare) b)
-    , O.null             (f a) == null                  (g b)
-    , O.length           (f a) == length                (g b)
-    , show               (f a) == show                  (g (sort b))
-    , sort (F.toList a)        == sort b
-    ]
+  and [                    (f a) == f (fromList              b)
+      , toList (Just Asc)  (f a) == g (sort                  b)
+      , toList (Just Desc) (f a) == g (sortBy (flip compare) b)
+      , O.null             (f a) == null                  (g b)
+      , O.length           (f a) == length                (g b)
+      , show               (f a) == show                  (g (sort b))
+      , sort (F.toList a)        == sort b
+      ]
 
 observe :: (NFData a, Show a, Ord a) => List a -> [a] -> Bool
 observe a b =
