@@ -14,7 +14,7 @@ module Data.List.Ordered
 ( 
 -- * Ordered list type.
   List
-, Direction (..)
+, Order (..)
 
 -- * Constructing ordered lists.
 , empty
@@ -92,19 +92,19 @@ import Prelude hiding (filter, drop, take, length, null, mapM, foldr)
 
 import qualified Control.Applicative
 import qualified Data.Foldable as F
-import qualified Data.Map as M
+import qualified Data.Map      as M
 import qualified Data.Sequence as S
 
 -------------------------------------------------------------------------------
 
 data List a  where
-  Directed ::          Direction -> Seq a  -> List a
-  FromBoth ::          Seq a -> Seq a      -> List a
-  Merge    ::          List a -> List a    -> List a
-  Take     ::          Int -> List a       -> List a
-  Drop     ::          Int -> List a       -> List a
-  Sort     :: Ord a => Direction -> List a -> List a
-  Nub      :: Eq a  => List a              -> List a
+  Directed ::          Order -> Seq a   -> List a
+  FromBoth ::          Seq a -> Seq a   -> List a
+  Merge    ::          List a -> List a -> List a
+  Take     ::          Int -> List a    -> List a
+  Drop     ::          Int -> List a    -> List a
+  Sort     :: Ord a => Order -> List a  -> List a
+  Nub      :: Eq a  => List a           -> List a
 
 instance Foldable List where
   foldMap f = foldMap f . toUnorderedList
@@ -123,7 +123,7 @@ instance Monoid (List a) where
   mappend = merge
 
 -- | A sorting direction, either ascending or descending.
-data Direction = Asc | Desc
+data Order = Asc | Desc
   deriving (Eq, Ord, Show)
 
 -------------------------------------------------------------------------------
@@ -225,14 +225,14 @@ nub = Nub
 -- | Sort the list in ascending or descending order using the default `Ord'
 -- instance for the value type.
 
-sort :: Ord a => Direction -> List a -> List a
+sort :: Ord a => Order -> List a -> List a
 sort = Sort
 
 -- | Sort the list in ascending or descending order with a custom ordering
 -- function. This breaks the original list structure and rebuild a new order
 -- list from the result. This is likely to be inefficient.
 
-sortBy :: Direction -> (a -> a -> Ordering) -> List a -> List a
+sortBy :: Order -> (a -> a -> Ordering) -> List a -> List a
 sortBy d f =
   case d of
     Asc  -> fromAscSeq  . S.unstableSortBy f
@@ -321,7 +321,7 @@ fromMapRange a b = fromMap . mapRange a b
 -- For ordered lists constructed out off a small number of large input lists
 -- the running time will be approximately linear.
 
-toSeq :: Ord a => Maybe Direction -> List a -> Seq a
+toSeq :: Ord a => Maybe Order -> List a -> Seq a
 toSeq Nothing     = toUnorderedSeq
 toSeq (Just Desc) = toDescSeq
 toSeq (Just Asc)  = toAscSeq
@@ -371,7 +371,7 @@ toDescSeq (Nub           xs) = localNubBy (==) (toDescSeq xs)
 
 -- | /O(n * n)/ Like `toSeq' but convert to a regular Haskell list.
 
-toList :: Ord a => Maybe Direction -> List a -> [a]
+toList :: Ord a => Maybe Order -> List a -> [a]
 toList a = F.toList . toSeq a
 
 -- | /O(n)/ Like `toUnorderedSeq' but convert to a regular Haskell list.
