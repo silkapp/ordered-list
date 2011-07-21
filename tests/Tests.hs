@@ -6,7 +6,7 @@ import Control.Applicative
 import Control.DeepSeq
 import Control.Monad.Trans
 import Data.List
-import Data.List.Ordered hiding (null, length, take, drop, filter, empty, sort, nub, sortBy)
+import Data.List.Ordered hiding (null, length, take, drop, filter, empty, sort, sortBy, concat)
 import Data.Monoid
 import System.IO.Unsafe
 import System.Random
@@ -35,10 +35,10 @@ instance (Ord a, Arbitrary a) => Arbitrary (List a) where
   arbitrary = frequency [ (2, (fromAscList . sort) `fmap` arbitrary)
                         , (2, (fromDescList . sortR) `fmap` arbitrary)
                         , (2, fromList `fmap` arbitrary)
-                        , (3, merge <$> arbitrary <*> arbitrary)
+                        , (3, append <$> arbitrary <*> arbitrary)
                         , (1, O.take <$> (unSlice <$> arbitrary) <*> arbitrary)
                         , (1, O.drop <$> (unSlice <$> arbitrary) <*> arbitrary)
-                        , (1, O.nub <$> arbitrary )
+                        , (1, O.uniq <$> arbitrary )
                         ]
 
 -------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ fromListsT :: [[Val]] -> Bool
 fromListsT a = observe (fromLists a) (concat a)
 
 mergesT :: [[Val]] -> Bool
-mergesT a = observe (merges (map fromList a)) (concat a)
+mergesT a = observe (O.concat (O.fromList <$> a)) (concat a)
 
 addEmptyT :: [Val] -> Bool
 addEmptyT a = observe (foldr add O.empty a) a
@@ -129,7 +129,7 @@ fromMapRangeT key keys mid ii jj x y =
   in observe olist list
 
 localNubByT :: [Val] -> Bool
-localNubByT a = observe (O.nub (fromList a)) (nub (sort a))
+localNubByT a = observe (O.uniq (fromList a)) (nub (sort a))
 
 filterT :: List Val -> Bool
 filterT a =
@@ -192,7 +192,7 @@ main =
      putStrLn "fromDescListT: ";         quickCheck fromDescListT
      putStrLn "fromAscOrDescListT: ";    quickCheck fromAscOrDescListT
      putStrLn "fromListsT: ";            quickCheck fromListsT
-     putStrLn "mergesT: ";               quickCheckWith stdArgs { maxSize = 7 } bindT
+     putStrLn "mergesT: ";               quickCheckWith stdArgs { maxSize = 7 } mergesT
      putStrLn "addEmptyT: ";             quickCheck addEmptyT
      putStrLn "mappendMemptyT: ";        quickCheck mappendMemptyT
      putStrLn "fromMapT: ";              quickCheck fromMapT
