@@ -82,9 +82,9 @@ import Generics.Regular hiding (from, to)
 import Prelude hiding (filter, drop, take, length, null, mapM, foldr, concat)
 
 import qualified Control.Applicative
-import qualified Data.Foldable as F
-import qualified Data.Map      as M
-import qualified Data.List     as L
+import qualified Data.Foldable   as F
+import qualified Data.Map.Strict as M
+import qualified Data.List       as L
 
 -------------------------------------------------------------------------------
 
