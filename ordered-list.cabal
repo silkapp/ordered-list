@@ -7,11 +7,11 @@ Category:         Control, Data
 License:          BSD3
 License-file:     LICENSE
 Author:           Sebastiaan Visser
-Maintainer:       code@typlab.com
-Copyright:        (c) 2011, typLAB
+Maintainer:       code@silkapp.com
+Copyright:        (c) 2011, Silk
 Build-Type:       Simple
 Cabal-Version:    >= 1.6
-Homepage:         http://github.com/typLAB/ordered-list
+Homepage:         http://github.com/silkapp/ordered-list
 
 Library
   GHC-Options:      -Wall
