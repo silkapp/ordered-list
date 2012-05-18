@@ -1,5 +1,5 @@
 Name:             ordered-list
-Version:          0.4.1
+Version:          0.4.2
 Synopsis:         Ordered list type with efficient and streaming observation in two directions.
 Description:      Ordered list type with efficient and streaming observation in two directions.
 
@@ -21,11 +21,11 @@ Library
 
       base               == 4.*
     , mtl                >= 1.1 && < 2.1
-    , arrow-list         >= 0.4 && < 0.6
+    , arrow-list         >= 0.4 && < 0.7
     , strict-containers  == 0.4.2.*
     , regular-extras     == 0.2.*
     , regular            == 0.3.*
-    , deepseq            >= 1.1 && < 1.3
+    , deepseq            >= 1.1 && < 1.4
 
   Exposed-modules:  Control.Arrow.List.Ordered
                     Data.List.Ordered
