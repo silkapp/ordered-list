@@ -78,11 +78,9 @@ import Data.Function (on)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
-import Generics.Regular hiding (from, to)
 import Prelude hiding (filter, drop, take, length, null, mapM, foldr, concat)
 
 import qualified Control.Applicative
-import qualified Data.Foldable   as F
 import qualified Data.Map.Strict as M
 import qualified Data.List       as L
 
@@ -382,7 +380,7 @@ mapRange from to m0 =
 -- input bound. A result of Right means the length result is exact, a Left
 -- result means at least that many items are contained.
 
-smartLength :: Num i => i -> [a] -> Maybe i
+smartLength :: (Eq i, Num i) => i -> [a] -> Maybe i
 smartLength a b = f a b
   where f n zs = case (n, zs) of
                    (_, []    ) -> Just 0
