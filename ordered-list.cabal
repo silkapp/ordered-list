@@ -1,5 +1,5 @@
 Name:             ordered-list
-Version:          0.4.4
+Version:          0.4.4.1
 Synopsis:         Ordered list type with efficient and streaming observation in two directions.
 Description:      Ordered list type with efficient and streaming observation in two directions.
 
