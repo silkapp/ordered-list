@@ -20,7 +20,7 @@ Library
   Build-Depends:
 
       base               == 4.*
-    , mtl                >= 1.1 && < 2.1
+    , mtl                >= 1.1 && < 2.2
     , arrow-list         >= 0.4 && < 0.7
     , strict-containers  == 0.4.*
     , regular-extras     == 0.2.*
