@@ -7,7 +7,7 @@ Category:         Control, Data
 License:          BSD3
 License-file:     LICENSE
 Author:           Sebastiaan Visser
-Maintainer:       code@silkapp.com
+Maintainer:       code@silk.co
 Copyright:        (c) 2011, Silk
 Build-Type:       Simple
 Cabal-Version:    >= 1.6
