@@ -77,7 +77,6 @@ import Data.Foldable (Foldable (foldMap))
 import Data.Function (on)
 import Data.Maybe
 import Data.Monoid
-import Data.Ord
 import Data.Traversable (mapM)
 import qualified Control.Applicative
 import qualified Data.List           as L

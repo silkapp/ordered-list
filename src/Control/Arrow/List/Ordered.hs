@@ -10,8 +10,8 @@ module Control.Arrow.List.Ordered where
 import Prelude hiding (const, id, (.))
 
 import Control.Arrow
-import Control.Arrow.ArrowF
-import Control.Arrow.ArrowKleisli
+import Control.Arrow.Kleisli.Class
+import Control.Arrow.ListLike.Class
 import Control.Category
 import Control.Monad.Identity
 import Data.List.Ordered
@@ -41,7 +41,7 @@ type ListArrow a b = ListTArrow Identity a b
 runListArrow :: ListArrow a b -> a -> List b
 runListArrow a = runIdentity . runListTArrow a
 
-instance Monad m => ArrowF List (ListTArrow m) where
+instance Monad m => ArrowListLike List (ListTArrow m) where
   embed     = ListTArrow (Kleisli (ListT . return))
   observe f = ListTArrow . Kleisli $ \a -> ListT $
                 singleton `liftM` runListT (runKleisli (runListTArrow' f) a)
