@@ -1,16 +1,17 @@
 {-# LANGUAGE
-    GeneralizedNewtypeDeriving
-  , TypeOperators
-  , FlexibleInstances
+    FlexibleInstances
+  , GeneralizedNewtypeDeriving
   , MultiParamTypeClasses
   , StandaloneDeriving
+  , TypeOperators
   #-}
 module Control.Arrow.List.Ordered where
 
-import Prelude hiding ((.), id, const)
+import Prelude hiding (const, id, (.))
+
 import Control.Arrow
-import Control.Arrow.ArrowKleisli
 import Control.Arrow.ArrowF
+import Control.Arrow.ArrowKleisli
 import Control.Category
 import Control.Monad.Identity
 import Data.List.Ordered
@@ -44,4 +45,3 @@ instance Monad m => ArrowF List (ListTArrow m) where
   embed     = ListTArrow (Kleisli (ListT . return))
   observe f = ListTArrow . Kleisli $ \a -> ListT $
                 singleton `liftM` runListT (runKleisli (runListTArrow' f) a)
-

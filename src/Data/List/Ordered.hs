@@ -1,13 +1,13 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE
-    DeriveFunctor
-  , DeriveFoldable
+    DeriveFoldable
+  , DeriveFunctor
   , DeriveTraversable
-  , TupleSections
-  , TemplateHaskell
-  , TypeFamilies
   , EmptyDataDecls
   , GADTs
+  , TemplateHaskell
+  , TupleSections
+  , TypeFamilies
   #-}
 
 {- |
@@ -16,73 +16,72 @@ directions. This list is especially useful when constructing ordered sequences
 from a collection of preordered sub-sequences.
 -}
 module Data.List.Ordered
-( 
--- * Ordered list type.
-  List
-, Order (..)
+  (
+  -- * Ordered list type.
+    List
+  , Order (..)
 
--- * Constructing ordered lists.
-, empty
-, singleton
-, add
-, append
-, concat
+  -- * Constructing ordered lists.
+  , empty
+  , singleton
+  , add
+  , append
+  , concat
 
--- * Operations on ordered lists.
-, null
-, length
-, mapMonotonic
-, mergeMap
-, filter
-, take
-, drop
-, boundedLength
-, uniq
-, sort
-, sortBy
+  -- * Operations on ordered lists.
+  , null
+  , length
+  , mapMonotonic
+  , mergeMap
+  , filter
+  , take
+  , drop
+  , boundedLength
+  , uniq
+  , sort
+  , sortBy
 
--- * Creation from Haskell lists.
-, fromList
-, fromAscList
-, fromDescList
-, fromAscOrDescList
-, fromLists
+  -- * Creation from Haskell lists.
+  , fromList
+  , fromAscList
+  , fromDescList
+  , fromAscOrDescList
+  , fromLists
 
--- * Creation from Maps.
-, fromMap
-, fromMapRange
+  -- * Creation from Maps.
+  , fromMap
+  , fromMapRange
 
--- * Observing as regular Haskell lists.
-, toList
-, toUnorderedList
-, toAscList
-, toDescList
+  -- * Observing as regular Haskell lists.
+  , toList
+  , toUnorderedList
+  , toAscList
+  , toDescList
 
--- * List monad transformer wrapper.
-, ListT (..)
+  -- * List monad transformer wrapper.
+  , ListT (..)
 
--- * Internally used helper functions.
-, mergeBy
-, uniquesBy
-, mapRange
-, smartLength
-)
-where
+  -- * Internally used helper functions.
+  , mergeBy
+  , uniquesBy
+  , mapRange
+  , smartLength
+  ) where
+
+import Prelude hiding (concat, drop, filter, foldr, length, mapM, null, take)
 
 import Control.Applicative hiding (empty)
 import Control.Monad.Identity hiding (mapM)
 import Control.Monad.Trans
 import Data.Foldable (Foldable (foldMap))
-import Data.Traversable (mapM)
 import Data.Function (on)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
-import Prelude hiding (filter, drop, take, length, null, mapM, foldr, concat)
-
+import Data.Traversable (mapM)
 import qualified Control.Applicative
-import qualified Data.Map.Strict as M
-import qualified Data.List       as L
+import qualified Data.List           as L
+import qualified Data.Map.Strict     as M
 
 -------------------------------------------------------------------------------
 
@@ -155,7 +154,7 @@ concat = Merge
 -- elements.
 
 mapMonotonic :: Ord b => (a -> b) -> List a -> List b
-mapMonotonic f = r where 
+mapMonotonic f = r where
   r l = case l of
           Directed  d xs -> Directed d (fmap f xs)
           FromBoth xs ys -> FromBoth (fmap f xs) (fmap f ys)
@@ -273,7 +272,7 @@ fromMapRange a b = fromMap . mapRange a b
 -- | /O(n * n)/ Observe the ordered list as an ordinary Haskell list. The list
 -- can be constructed with all elements in ascending order, in descending
 -- order, or without any specific ordering.
--- 
+--
 -- /A note on performance:/ The quadratic running time is worst-case and only
 -- holds when the list is constructed out of multiple single-element items.
 -- For ordered lists constructed out off a small number of large input lists
