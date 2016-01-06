@@ -73,10 +73,10 @@ import Prelude hiding (concat, drop, filter, foldr, length, mapM, null, take)
 import Control.Applicative hiding (empty)
 import Control.Monad.Identity hiding (mapM)
 import Control.Monad.Trans
-import Data.Foldable (Foldable (foldMap))
+import qualified Data.Foldable as F (Foldable (foldMap))
 import Data.Function (on)
 import Data.Maybe
-import Data.Monoid
+import qualified Data.Monoid as M
 import Data.Traversable (mapM)
 import qualified Control.Applicative
 import qualified Data.List           as L
@@ -93,8 +93,8 @@ data List a  where
   Sort     :: Ord a => Order -> List a -> List a
   Uniq     :: Eq a  => List a          -> List a
 
-instance Foldable List where
-  foldMap f = foldMap f . toUnorderedList
+instance F.Foldable List where
+  foldMap f = F.foldMap f . toUnorderedList
 
 instance Ord a => Eq (List a) where
   a == b = compare a b == EQ
@@ -105,7 +105,7 @@ instance Ord a => Ord (List a) where
 instance (Ord a, Show a) => Show (List a) where
   show = show . toAscList
 
-instance Monoid (List a) where
+instance M.Monoid (List a) where
   mempty  = empty
   mappend = append
   mconcat = concat
@@ -256,7 +256,7 @@ fromAscOrDescList = FromBoth
 -- | /O(m)/
 
 fromLists :: Ord a => [[a]] -> List a
-fromLists = fromList . mconcat
+fromLists = fromList . M.mconcat
 
 -------------------------------------------------------------------------------
 
@@ -288,7 +288,7 @@ toUnorderedList :: List a -> [a]
 toUnorderedList (Directed Asc  xs) = xs
 toUnorderedList (Directed Desc xs) = xs
 toUnorderedList (FromBoth   xs _ ) = xs
-toUnorderedList (Merge         xs) = mconcat (fmap toUnorderedList xs)
+toUnorderedList (Merge         xs) = M.mconcat (fmap toUnorderedList xs)
 toUnorderedList (Take        j xs) = L.take j (toUnorderedList xs)
 toUnorderedList (Drop        j xs) = L.drop j (toUnorderedList xs)
 toUnorderedList (Sort Asc      xs) = toAscList xs
